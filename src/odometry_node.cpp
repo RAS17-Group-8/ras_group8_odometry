@@ -1,5 +1,5 @@
 #include <ros/ros.h>
-#include "ras_group8_odometry/odometry.hpp"
+#include "ras_group8_odometry/Odometry.hpp"
 
 int main(int argc, char** argv)
 {

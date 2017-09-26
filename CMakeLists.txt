@@ -5,6 +5,7 @@ find_package(catkin REQUIRED
   COMPONENTS
   roscpp
   geometry_msgs
+  phidgets
 )
 
 catkin_package(
@@ -14,6 +15,7 @@ catkin_package(
   CATKIN_DEPENDS
     roscpp
     geometry_msgs
+    phidgets
 
 # DEPENDS
 )
@@ -25,7 +27,7 @@ include_directories(
 
 add_executable(${PROJECT_NAME}
   src/odometry_node.cpp
-  src/odometry.cpp
+  src/Odometry.cpp
 )
 
 add_dependencies(${PROJECT_NAME}
@@ -36,7 +38,7 @@ target_link_libraries(${PROJECT_NAME}
   ${catkin_LIBRARIES}
 )
 
-catkin_add_gtest(${PROJECT_NAME}_tests test/test_odometry.cpp src/odometry.cpp)
+catkin_add_gtest(${PROJECT_NAME}_tests test/test_odometry.cpp src/Odometry.cpp)
 
 # Make main executable
 install(

@@ -1,4 +1,4 @@
-#include "ras_group8_odometry/odometry.hpp"
+#include "ras_group8_odometry/Odometry.hpp"
 
 // STD
 #include <string>
@@ -34,11 +34,11 @@ Odometry::~Odometry()
 {
 }
 
-void Odometry::leftWheelEncoderCallback()
+void Odometry::leftWheelEncoderCallback(const phidgets::motor_encoder& msg)
 {
 }
 
-void Odometry::rightWheelEncoderCallback()
+void Odometry::rightWheelEncoderCallback(const phidgets::motor_encoder& msg)
 {
 }
 
@@ -46,15 +46,15 @@ bool Odometry::readParameters()
 {
   /* Try to load all the parameters. Return false if any one
      of them fails. */
-  if (!n_.getParam("wheel_base",                 wheelBase_))
+  if (!nodeHandle_.getParam("wheel_base",               wheelBase_))
     return false;
-  if (!n_.getParam("wheel_radius",               wheelRadius_))
+  if (!nodeHandle_.getParam("wheel_radius",             wheelRadius_))
     return false;
-  if (!n_.getParam("left_wheel_encoder_topic",   leftWheelEncoderTopic_))
+  if (!nodeHandle_.getParam("left_wheel_encoder_topic", leftWheelEncoderTopic_))
     return false;
-  if (!n_.getParam("right_wheel_encoder_topic",  rightWheelEncoderTopic_))
+  if (!nodeHandle_.getParam("right_wheel_encoder_topic", rightWheelEncoderTopic_))
     return false;
-  if (!n_.getParam("publish_topic",              publishTopic_))
+  if (!nodeHandle_.getParam("publish_topic",            publishTopic_))
     return false;
   
   return true;
