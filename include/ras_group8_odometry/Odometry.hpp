@@ -4,6 +4,8 @@
 // ROS
 #include <ros/ros.h>
 
+#include <phidgets/motor_encoder.h>
+
 /* TODO: Document the methods.
  */
 
@@ -28,8 +30,8 @@ class Odometry
    
   bool readParameters();
 
-  void leftWheelEncoderCallback();
-  void rightWheelEncoderCallback();
+  void leftWheelEncoderCallback(const phidgets::motor_encoder& msg);
+  void rightWheelEncoderCallback(const phidgets::motor_encoder& msg);
 
   ros::NodeHandle& nodeHandle_;
 

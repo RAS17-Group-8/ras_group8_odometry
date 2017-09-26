@@ -5,6 +5,7 @@ find_package(catkin REQUIRED
   COMPONENTS
   roscpp
   geometry_msgs
+  phidgets
 )
 
 catkin_package(
@@ -14,6 +15,7 @@ catkin_package(
   CATKIN_DEPENDS
     roscpp
     geometry_msgs
+    phidgets
 
 # DEPENDS
 )

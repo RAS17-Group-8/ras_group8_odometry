@@ -34,11 +34,11 @@ Odometry::~Odometry()
 {
 }
 
-void Odometry::leftWheelEncoderCallback()
+void Odometry::leftWheelEncoderCallback(const phidgets::motor_encoder& msg)
 {
 }
 
-void Odometry::rightWheelEncoderCallback()
+void Odometry::rightWheelEncoderCallback(const phidgets::motor_encoder& msg)
 {
 }
 
