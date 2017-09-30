@@ -4,6 +4,7 @@
 // ROS
 #include <ros/ros.h>
 
+#include <std_srvs/Trigger.h>
 #include <phidgets/motor_encoder.h>
 
 /* TODO: Document the methods.
@@ -15,16 +16,19 @@ namespace ras_group8_odometry
 class Odometry
 {
  public:
-  /*!
-   * Constructor.
+  /* Constructor.
    * @param nodeHandle the ROS node handle.
    */
   Odometry(ros::NodeHandle& nodeHandle);
-
-  /*!
-   * Destructor.
+  
+  /* Destructor.
    */
   virtual ~Odometry();
+
+  /* Call this method to force the node to reload all of its parameter settings.
+   * More commonly this would also be attached to a message callback.
+   */
+  bool reload();
 
  private:
    
@@ -32,6 +36,9 @@ class Odometry
 
   void leftWheelEncoderCallback(const phidgets::motor_encoder& msg);
   void rightWheelEncoderCallback(const phidgets::motor_encoder& msg);
+  
+  bool reloadCallback(std_srvs::Trigger::Request& request,
+                      std_srvs::Trigger::Response& response);
 
   ros::NodeHandle& nodeHandle_;
 
@@ -39,6 +46,10 @@ class Odometry
   ros::Subscriber rightWheelEncoderSubscriber_;
   
   ros::Publisher odometryPublisher_;
+  
+  /* Services
+   */
+  ros::ServiceServer reloadService_;
 
   /* Parameters
    */
