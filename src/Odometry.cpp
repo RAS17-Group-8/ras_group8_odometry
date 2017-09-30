@@ -66,14 +66,14 @@ bool Odometry::readParameters()
   /* Try to load all the parameters. Return false if any one
      of them fails. */
   if (!nodeHandle_.getParam("/ras_group8_platform/wheel_distance",
-                            wheelBase_))
+                            wheelDistance_))
     return false;
-  ROS_INFO("Using wheel distance %f", wheelBase_);
+  ROS_INFO("Using wheel distance %f", wheelDistance_);
   
   if (!nodeHandle_.getParam("/ras_group8_platform/wheel_radius",
                             wheelRadius_))
     return false;
-  ROS_INFO("Using wheel radius %f", wheelBase_);
+  ROS_INFO("Using wheel radius %f", wheelRadius_);
   
   if (!nodeHandle_.getParam("left_wheel_encoder_topic",
                             leftWheelEncoderTopic_))

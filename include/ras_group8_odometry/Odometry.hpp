@@ -57,7 +57,7 @@ class Odometry
   std::string rightWheelEncoderTopic_;
   std::string publishTopic_;
   
-  double wheelBase_;
+  double wheelDistance_;
   double wheelRadius_;
   
 };
