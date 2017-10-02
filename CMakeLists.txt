@@ -6,6 +6,8 @@ find_package(catkin REQUIRED
   roscpp
   geometry_msgs
   phidgets
+  tf
+  nav_msgs
 )
 
 catkin_package(
@@ -16,6 +18,8 @@ catkin_package(
     roscpp
     geometry_msgs
     phidgets
+    tf
+    nav_msgs
 
 # DEPENDS
 )

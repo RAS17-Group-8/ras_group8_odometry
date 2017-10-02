@@ -42,6 +42,44 @@ void Odometry::rightWheelEncoderCallback(const phidgets::motor_encoder& msg)
 {
 }
 
+void publishOdometry()
+{
+  nav_msgs::Odometry odometry;
+  odometry.header.stamp = current_time;
+  odometry.header.frame_id = headerFrameId_;
+  
+  //set the position
+  odometry.pose.pose.position.x = x;
+  odometry.pose.pose.position.y = y;
+  odometry.pose.pose.position.z = 0.0;
+  odometry.pose.pose.orientation = odom_quat;
+  
+  //set the velocity
+  odometry.child_frame_id = childFrameId_;
+  odometry.twist.twist.linear.x = vx;
+  odometry.twist.twist.linear.y = vy;
+  odometry.twist.twist.angular.z = vth;
+  
+  //publish the message
+  odom_pub.publish(odom);
+}
+
+void broadcastFrame(double x, double y, geometry_msgs::Quaternion& quat)
+{
+  geometry_msgs::TransformStamped odometryTransform;
+  
+  odometryTransform.header.stamp = current_time;
+  odometryTransform.header.frame_id = headerFrameId_;
+  odometryTransform.child_frame_id = childFrameId_;
+  
+  odometryTransform.transform.translation.x = x;
+  odometryTransform.transform.translation.y = y;
+  odometryTransform.transform.translation.z = 0.0;
+  odometryTransform.transform.rotation = quat;
+  
+  odometryPublisher_.sendTransform(odometryTransform);
+}
+
 bool Odometry::readParameters()
 {
   /* Try to load all the parameters. Return false if any one
