@@ -3,13 +3,9 @@
 
 // ROS
 #include <ros/ros.h>
-
-<<<<<<< HEAD
 #include <tf/transform_broadcaster.h>
 #include <nav_msgs/Odometry.h>
-=======
 #include <std_srvs/Trigger.h>
->>>>>>> origin/master
 #include <phidgets/motor_encoder.h>
 
 /* TODO: Document the methods.
