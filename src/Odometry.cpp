@@ -14,8 +14,7 @@ namespace ras_group8_odometry {
 Odometry::Odometry(ros::NodeHandle& nodeHandle)
     : nodeHandle_(nodeHandle)
 {
-  if (!readParameters()) {
-    ROS_ERROR("Could not read parameters.");
+  if (!reload()) {
     ros::requestShutdown();
   }
   
@@ -23,6 +22,28 @@ Odometry::Odometry(ros::NodeHandle& nodeHandle)
    */
   reloadService_ =
     nodeHandle_.advertiseService("reload", &Odometry::reloadCallback, this);
+  
+  ROS_INFO("Successfully launched node.");
+}
+
+Odometry::~Odometry()
+{
+}
+
+bool Odometry::reload()
+{
+  if (!readParameters()) {
+    ROS_ERROR("Could not read parameters.");
+    return false;
+  }
+  
+  if (leftWheelEncoderSubscriber_) {
+    leftWheelEncoderSubscriber_.shutdown();
+  }
+  
+  if (rightWheelEncoderSubscriber_) {
+    rightWheelEncoderSubscriber_.shutdown();
+  }
   
   /* Subsribe to encoder updates */
   leftWheelEncoderSubscriber_ =
@@ -32,12 +53,6 @@ Odometry::Odometry(ros::NodeHandle& nodeHandle)
   rightWheelEncoderSubscriber_ =
     nodeHandle_.subscribe(rightWheelEncoderTopic_, 1,
                           &Odometry::rightWheelEncoderCallback, this);
-  
-  ROS_INFO("Successfully launched node.");
-}
-
-Odometry::~Odometry()
-{
 }
 
 void Odometry::leftWheelEncoderCallback(const phidgets::motor_encoder& msg)
@@ -51,11 +66,11 @@ void Odometry::rightWheelEncoderCallback(const phidgets::motor_encoder& msg)
 bool Odometry::reloadCallback(std_srvs::Trigger::Request& request,
                               std_srvs::Trigger::Response& response)
 {
-  if (readParameters()) {
+  if (reload()) {
     response.success = true;
   } else {
     response.success = false;
-    response.message = "Failed to reload parameters";
+    response.message = "Failed to reload node";
   }
   
   return true;
