@@ -7,6 +7,8 @@ find_package(catkin REQUIRED
   geometry_msgs
   std_srvs
   phidgets
+  tf
+  nav_msgs
 )
 
 catkin_package(
@@ -18,6 +20,8 @@ catkin_package(
     geometry_msgs
     std_srvs
     phidgets
+    tf
+    nav_msgs
 
 # DEPENDS
 )

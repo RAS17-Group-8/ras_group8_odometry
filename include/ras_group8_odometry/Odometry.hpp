@@ -3,7 +3,8 @@
 
 // ROS
 #include <ros/ros.h>
-
+#include <tf/transform_broadcaster.h>
+#include <nav_msgs/Odometry.h>
 #include <std_srvs/Trigger.h>
 #include <phidgets/motor_encoder.h>
 
@@ -37,15 +38,26 @@ class Odometry
   void leftWheelEncoderCallback(const phidgets::motor_encoder& msg);
   void rightWheelEncoderCallback(const phidgets::motor_encoder& msg);
   
-  bool reloadCallback(std_srvs::Trigger::Request& request,
-                      std_srvs::Trigger::Response& response);
 
+  void publishOdometry();
+  void broadcastFrame();
+
+  bool reloadCallback(std_srvs::Trigger::Request& request,
+                                  std_srvs::Trigger::Response& response);
+
+
+  /* Main Node Handle
+   */
   ros::NodeHandle& nodeHandle_;
 
   ros::Subscriber leftWheelEncoderSubscriber_;
   ros::Subscriber rightWheelEncoderSubscriber_;
   
+  /* Publishers for the odometry and the reference frame
+   */
   ros::Publisher odometryPublisher_;
+  tf::TransformBroadcaster frameBroadcaster_;
+
   
   /* Services
    */
@@ -56,10 +68,11 @@ class Odometry
   std::string leftWheelEncoderTopic_;
   std::string rightWheelEncoderTopic_;
   std::string publishTopic_;
+  std::string headerFrameId_;
+  std::string childFrameId_;
   
   double wheelDistance_;
   double wheelRadius_;
-  
 };
 
 } /* namespace */
