@@ -70,6 +70,14 @@ class Odometry
   std::string publishTopic_;
   std::string headerFrameId_;
   std::string childFrameId_;
+  double x;
+  double y;
+  double z;
+  double vx;
+  double vy;
+  double vth;
+  double vleft;
+  double vright;
   
   double wheelDistance_;
   double wheelRadius_;

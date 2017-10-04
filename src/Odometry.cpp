@@ -42,14 +42,68 @@ Odometry::~Odometry()
 
 void Odometry::leftWheelEncoderCallback(const phidgets::motor_encoder& msg)
 {
+    double velocity;
+    double time = ros::Time::now().toSec();
+    double dt;
+
+
+    vleft = msg.count_change * wheel_circumference /
+                encoderTicsPerRevolution_ / dt;
+    double v_left=vleft;
+    double v_right=vright;
+
+    vx = ((v_right + v_left) / 2)*10;
+    vy = 0;
+    vth = ((v_right - v_left)/lengthBetweenTwoWheels)*10;
+    double dt=time-lasttime;
+    double delta_x = (vx * cos(th)) * dt;
+    double delta_y = (vx * sin(th)) * dt;
+    double delta_th = vth * dt;
+
+    x += delta_x;
+    y += delta_y;
+    th += delta_th;
+
+    Odometry::publishOdometry();
 }
 
 void Odometry::rightWheelEncoderCallback(const phidgets::motor_encoder& msg)
 {
+    double velocity;
+    double time = ros::Time::now().toSec();
+    double dt;
+
+
+    vright = msg.count_change * wheel_circumference /
+                encoderTicsPerRevolution_ / dt;
+
+    double v_left=vleft;
+    double v_right=vright;
+
+    vx = ((v_right + v_left) / 2)*10;
+    vy = 0;
+    vth = ((v_right - v_left)/lengthBetweenTwoWheels)*10;
+    double dt=time-lasttime;
+    double delta_x = (vx * cos(th)) * dt;
+    double delta_y = (vx * sin(th)) * dt;
+    double delta_th = vth * dt;
+
+    x += delta_x;
+    y += delta_y;
+    th += delta_th;
+
+    Odometry::publishOdometry();
+
+
 }
 
 void publishOdometry()
 {
+
+
+
+
+
   nav_msgs::Odometry odometry;
   odometry.header.stamp = current_time;
   odometry.header.frame_id = headerFrameId_;
