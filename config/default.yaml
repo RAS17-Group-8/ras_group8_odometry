@@ -1,10 +1,11 @@
-left_wheel_encoder_topic: /motorcontrol/encoder
-right_wheel_encoder_topic: /motorcontrol/encoder
-publish_topic: odometry
+left_wheel_encoder_topic: ras_group8_left/motorcontrol/encoder
+right_wheel_encoder_topic: ras_group8_right/motorcontrol/encoder
+publish_topic: odom
 header_frame_id: odometry
-child_frame_id: base_link
+child_frame_id: robot
 
 encoder_ticks_per_rev: 900
 wheel_circumference: 0.22934
-base:0.24
+wheel_distance: 0.24
+wheel_radius: 0.0365
 

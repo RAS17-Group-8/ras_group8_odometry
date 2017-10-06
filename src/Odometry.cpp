@@ -2,6 +2,7 @@
 
 // STD
 #include <string>
+#include <math.h>
 
 /* Since the two encoder messages might not be published at the same time we
  * probably need to cache the response of the first one, whichever it may be.
@@ -18,6 +19,17 @@ Odometry::Odometry(ros::NodeHandle& nodeHandle)
     ROS_ERROR("Could not read parameters.");
     ros::requestShutdown();
   }
+  x=0;
+  y=0;
+  th=0;
+  vx=0;
+  vy=0;
+  vth=0;
+  vleft=0;
+  vright=0;
+  wheel_circumference=0.22934;
+  encoderTicsPerRevolution_=900;
+  lasttime=ros::Time::now();
   
   /* Setup the reload service
    */
@@ -42,48 +54,44 @@ Odometry::~Odometry()
 
 void Odometry::leftWheelEncoderCallback(const phidgets::motor_encoder& msg)
 {
-    double velocity;
-    double time = ros::Time::now().toSec();
-    double dt;
+  ros::Time time = ros::Time::now();
+  double dt = (time-lasttime).toSec();
+  lasttime=time;
 
+  vleft = msg.count_change * wheel_circumference /
+              encoderTicsPerRevolution_ / dt;
+  
 
-    vleft = msg.count_change * wheel_circumference /
-                encoderTicsPerRevolution_ / dt;
-    double v_left=vleft;
-    double v_right=vright;
-
-    vx = ((v_right + v_left) / 2)*10;
-    vy = 0;
-    vth = ((v_right - v_left)/lengthBetweenTwoWheels)*10;
-    double dt=time-lasttime;
-    double delta_x = (vx * cos(th)) * dt;
-    double delta_y = (vx * sin(th)) * dt;
-    double delta_th = vth * dt;
-
-    x += delta_x;
-    y += delta_y;
-    th += delta_th;
-
-    Odometry::publishOdometry();
+  Odometry::publishOdometry(dt);
 }
 
 void Odometry::rightWheelEncoderCallback(const phidgets::motor_encoder& msg)
 {
-    double velocity;
-    double time = ros::Time::now().toSec();
-    double dt;
+  ros::Time time = ros::Time::now();
+  double dt = (time-lasttime).toSec();
+  lasttime=time;
+  
 
 
-    vright = msg.count_change * wheel_circumference /
-                encoderTicsPerRevolution_ / dt;
+  vright = msg.count_change * wheel_circumference /
+              encoderTicsPerRevolution_ / dt;
+
+  Odometry::publishOdometry(dt);
+
+
+}
+
+void Odometry::publishOdometry(double dt)
+{
+
 
     double v_left=vleft;
     double v_right=vright;
 
-    vx = ((v_right + v_left) / 2)*10;
+    vx = ((v_right + v_left) / 2);
     vy = 0;
-    vth = ((v_right - v_left)/lengthBetweenTwoWheels)*10;
-    double dt=time-lasttime;
+    vth = atan((v_right - v_left)/wheelDistance_);
+
     double delta_x = (vx * cos(th)) * dt;
     double delta_y = (vx * sin(th)) * dt;
     double delta_th = vth * dt;
@@ -92,21 +100,12 @@ void Odometry::rightWheelEncoderCallback(const phidgets::motor_encoder& msg)
     y += delta_y;
     th += delta_th;
 
-    Odometry::publishOdometry();
-
-
-}
-
-void publishOdometry()
-{
-
-
-
-
 
   nav_msgs::Odometry odometry;
-  odometry.header.stamp = current_time;
+  odometry.header.stamp = lasttime;
   odometry.header.frame_id = headerFrameId_;
+
+  geometry_msgs::Quaternion odom_quat = tf::createQuaternionMsgFromYaw(th);
   
   //set the position
   odometry.pose.pose.position.x = x;
@@ -121,14 +120,16 @@ void publishOdometry()
   odometry.twist.twist.angular.z = vth;
   
   //publish the message
-  odom_pub.publish(odom);
+  odometryPublisher_.publish(odometry);
+
+  Odometry::broadcastFrame(odom_quat);
 }
 
-void broadcastFrame(double x, double y, geometry_msgs::Quaternion& quat)
+void Odometry::broadcastFrame(geometry_msgs::Quaternion& quat)
 {
   geometry_msgs::TransformStamped odometryTransform;
   
-  odometryTransform.header.stamp = current_time;
+  odometryTransform.header.stamp = lasttime;
   odometryTransform.header.frame_id = headerFrameId_;
   odometryTransform.child_frame_id = childFrameId_;
   
@@ -137,7 +138,7 @@ void broadcastFrame(double x, double y, geometry_msgs::Quaternion& quat)
   odometryTransform.transform.translation.z = 0.0;
   odometryTransform.transform.rotation = quat;
   
-  odometryPublisher_.sendTransform(odometryTransform);
+  frameBroadcaster_.sendTransform(odometryTransform);
 }
 
 bool Odometry::reloadCallback(std_srvs::Trigger::Request& request,
@@ -157,12 +158,12 @@ bool Odometry::readParameters()
 {
   /* Try to load all the parameters. Return false if any one
      of them fails. */
-  if (!nodeHandle_.getParam("/ras_group8_platform/wheel_distance",
+  if (!nodeHandle_.getParam("wheel_distance",
                             wheelDistance_))
     return false;
   ROS_INFO("Using wheel distance %f", wheelDistance_);
   
-  if (!nodeHandle_.getParam("/ras_group8_platform/wheel_radius",
+  if (!nodeHandle_.getParam("wheel_radius",
                             wheelRadius_))
     return false;
   ROS_INFO("Using wheel radius %f", wheelRadius_);
@@ -173,8 +174,11 @@ bool Odometry::readParameters()
   if (!nodeHandle_.getParam("right_wheel_encoder_topic",
                             rightWheelEncoderTopic_))
     return false;
-  if (!nodeHandle_.getParam("publish_topic",
-                            publishTopic_))
+  if (!nodeHandle_.getParam("header_frame_id",
+                            headerFrameId_))
+    return false;
+  if (!nodeHandle_.getParam("child_frame_id",
+                            childFrameId_))
     return false;
   
   return true;

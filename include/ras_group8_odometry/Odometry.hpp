@@ -39,8 +39,8 @@ class Odometry
   void rightWheelEncoderCallback(const phidgets::motor_encoder& msg);
   
 
-  void publishOdometry();
-  void broadcastFrame();
+  void publishOdometry(double dt);
+  void broadcastFrame(geometry_msgs::Quaternion& quat);
 
   bool reloadCallback(std_srvs::Trigger::Request& request,
                                   std_srvs::Trigger::Response& response);
@@ -72,7 +72,7 @@ class Odometry
   std::string childFrameId_;
   double x;
   double y;
-  double z;
+  double th;
   double vx;
   double vy;
   double vth;
@@ -81,6 +81,10 @@ class Odometry
   
   double wheelDistance_;
   double wheelRadius_;
+  double wheel_circumference;
+  double encoderTicsPerRevolution_;
+
+  ros::Time lasttime;
 };
 
 } /* namespace */
