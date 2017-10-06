@@ -61,7 +61,7 @@ void Odometry::leftWheelEncoderCallback(const phidgets::motor_encoder& msg)
   timeleft=time;
   lasttime=time;
 
-  vleft = (-msg.count_change) * wheel_circumference /
+  vleft = (msg.count_change) * wheel_circumference /
               (encoderTicsPerRevolutionleft_) / dt;
 
 
@@ -80,7 +80,7 @@ void Odometry::rightWheelEncoderCallback(const phidgets::motor_encoder& msg)
   
 
 
-  vright = (msg.count_change) * wheel_circumference /
+  vright = (-msg.count_change) * wheel_circumference /
               (encoderTicsPerRevolutionright_) / dt;
 
   ROS_INFO("find right wheel in v=%f",vright);
@@ -99,13 +99,17 @@ void Odometry::publishOdometry(double dt)
 
     vx = ((v_right + v_left) / 2);
     vy = 0;
-    vth = atan((v_right - v_left)/wheelDistance_);
+    vth = -atan((v_right - v_left)/wheelDistance_);
 
-    //ROS_INFO("time is %f",dt);
+    
 
     double delta_x = (vx * cos(th)) * dt;
     double delta_y = (vx * sin(th)) * dt;
     double delta_th = vth * dt;
+
+
+    ROS_INFO("dx is %f",delta_x);
+    ROS_INFO("vth is %f",vth);
 
     x += delta_x;
     y += delta_y;
@@ -133,7 +137,7 @@ void Odometry::publishOdometry(double dt)
   //publish the message
 
   odometryPublisher_.publish(odometry);
-  ROS_INFO("publishing to topic ");
+  //ROS_INFO("publishing to topic ");
 
   Odometry::broadcastFrame(odom_quat);
 }
