@@ -28,9 +28,11 @@ Odometry::Odometry(ros::NodeHandle& nodeHandle)
   vleft=0;
   vright=0;
   wheel_circumference=0.22934;
-  encoderTicsPerRevolution_=900;
+  odometryPublisher_= nodeHandle_.advertise<nav_msgs::Odometry>(publishTopic_, 50);
+  //frameBroadcaster_=
   lasttime=ros::Time::now();
-  
+  timeleft=lasttime;
+  timeright=lasttime;
   /* Setup the reload service
    */
   reloadService_ =
@@ -55,26 +57,33 @@ Odometry::~Odometry()
 void Odometry::leftWheelEncoderCallback(const phidgets::motor_encoder& msg)
 {
   ros::Time time = ros::Time::now();
-  double dt = (time-lasttime).toSec();
+  double dt = (time-timeleft).toSec();
+  timeleft=time;
   lasttime=time;
 
-  vleft = msg.count_change * wheel_circumference /
-              encoderTicsPerRevolution_ / dt;
-  
+  vleft = (-msg.count_change) * wheel_circumference /
+              (encoderTicsPerRevolutionleft_) / dt;
 
+
+  //ROS_INFO("time is %f",dt);
+  ROS_INFO("find left wheel in v=%f",vleft);
   Odometry::publishOdometry(dt);
 }
 
 void Odometry::rightWheelEncoderCallback(const phidgets::motor_encoder& msg)
 {
   ros::Time time = ros::Time::now();
-  double dt = (time-lasttime).toSec();
+  double dt = (time-timeright).toSec();
+  timeright=time;
   lasttime=time;
+
   
 
 
-  vright = msg.count_change * wheel_circumference /
-              encoderTicsPerRevolution_ / dt;
+  vright = (msg.count_change) * wheel_circumference /
+              (encoderTicsPerRevolutionright_) / dt;
+
+  ROS_INFO("find right wheel in v=%f",vright);
 
   Odometry::publishOdometry(dt);
 
@@ -91,6 +100,8 @@ void Odometry::publishOdometry(double dt)
     vx = ((v_right + v_left) / 2);
     vy = 0;
     vth = atan((v_right - v_left)/wheelDistance_);
+
+    //ROS_INFO("time is %f",dt);
 
     double delta_x = (vx * cos(th)) * dt;
     double delta_y = (vx * sin(th)) * dt;
@@ -120,7 +131,9 @@ void Odometry::publishOdometry(double dt)
   odometry.twist.twist.angular.z = vth;
   
   //publish the message
+
   odometryPublisher_.publish(odometry);
+  ROS_INFO("publishing to topic ");
 
   Odometry::broadcastFrame(odom_quat);
 }
@@ -171,6 +184,7 @@ bool Odometry::readParameters()
   if (!nodeHandle_.getParam("left_wheel_encoder_topic",
                             leftWheelEncoderTopic_))
     return false;
+  //ROS_INFO("left topic is %s",leftWheelEncoderTopic_.c_str());
   if (!nodeHandle_.getParam("right_wheel_encoder_topic",
                             rightWheelEncoderTopic_))
     return false;
@@ -180,7 +194,18 @@ bool Odometry::readParameters()
   if (!nodeHandle_.getParam("child_frame_id",
                             childFrameId_))
     return false;
+
+  if (!nodeHandle_.getParam("encoder_ticks_per_rev_left",
+                            encoderTicsPerRevolutionleft_))
+    return false;
+
+  if (!nodeHandle_.getParam("encoder_ticks_per_rev_right",
+                            encoderTicsPerRevolutionright_))
+    return false;
   
+
+
+   
   return true;
 }
 

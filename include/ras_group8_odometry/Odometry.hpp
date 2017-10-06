@@ -82,9 +82,15 @@ class Odometry
   double wheelDistance_;
   double wheelRadius_;
   double wheel_circumference;
-  double encoderTicsPerRevolution_;
+  double encoderTicsPerRevolutionleft_;
+  double encoderTicsPerRevolutionright_;
 
   ros::Time lasttime;
+  ros::Time timeleft;
+  ros::Time timeright;
+
+  int abaaaa;
+
 };
 
 } /* namespace */
