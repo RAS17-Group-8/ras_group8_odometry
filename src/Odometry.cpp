@@ -135,16 +135,16 @@ Odometry Odometry::load(ros::NodeHandle& n)
   std::string child_frame_id("base_link");
   
   /* Load required parameters */
-  if (!n.getParam("wheel_distance", wheel_distance))
-    exit(-1);
+  if (!n.getParam("/platform/wheel_distance", wheel_distance))
+    exit(ERROR_MISSING_PARAMETER);
   ROS_INFO("wheel_distance = %f", wheel_distance);
   
   if (!n.getParam("left_motor_twist_topic", left_motor_twist_topic))
-    exit(-1);
+    exit(ERROR_MISSING_PARAMETER);
   ROS_INFO("left_motor_twist_topic = %s", left_motor_twist_topic.c_str());
   
   if (!n.getParam("right_motor_twist_topic", right_motor_twist_topic))
-    exit(-1);
+    exit(ERROR_MISSING_PARAMETER);
   ROS_INFO("right_motor_twist_topic = %s", right_motor_twist_topic.c_str());
       
   /* Load optional parameters */

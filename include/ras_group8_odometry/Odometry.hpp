@@ -13,6 +13,8 @@
 
 namespace ras_group8_odometry
 {
+
+#define ERROR_MISSING_PARAMETER 3
   
 typedef struct {
   double x;
