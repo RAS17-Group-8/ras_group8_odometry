@@ -4,228 +4,165 @@
 #include <string>
 #include <math.h>
 
-/* Since the two encoder messages might not be published at the same time we
- * probably need to cache the response of the first one, whichever it may be.
- * Depending on how out of sync they are we might need some form of prediction
- * model.
- */
-
 namespace ras_group8_odometry {
 
-Odometry::Odometry(ros::NodeHandle& nodeHandle)
-    : nodeHandle_(nodeHandle)
+/* Constructor
+ */
+Odometry::Odometry(ros::NodeHandle& node_handle,
+                   double wheel_distance,
+                   const std::string& left_motor_twist_topic,
+                   const std::string& right_motor_twist_topic,
+                   const std::string& odometry_publish_topic,
+                   const std::string& frame_id,
+                   const std::string& child_frame_id)
+    : node_handle_(node_handle),
+      wheel_distance_(wheel_distance),
+      last_updated_time_(ros::Time::now())
 {
-  if (!reload()) {
-    ros::requestShutdown();
-  }
-  x=0;
-  y=0;
-  th=0;
-  vx=0;
-  vy=0;
-  vth=0;
-  vleft=0;
-  vright=0;
-  wheel_circumference=0.22934;
-  odometryPublisher_= nodeHandle_.advertise<nav_msgs::Odometry>(publishTopic_, 50);
-  //frameBroadcaster_=
-  lasttime=ros::Time::now();
-  timeleft=lasttime;
-  timeright=lasttime;
-  /* Setup the reload service
-   */
-  reloadService_ =
-    nodeHandle_.advertiseService("reload", &Odometry::reloadCallback, this);
+  /* Set the state to a known inital position */
+  state_.x     = 0;
+  state_.y     = 0;
+  state_.theta = 0;
   
+  /* Setup constant fields in messages */
+  odometry_msg_.header.frame_id       = frame_id;
+  odometry_msg_.child_frame_id        = child_frame_id;
+  odometry_msg_.pose.pose.position.z  = 0.0;
+  
+  odometry_transform_.header.frame_id = frame_id;
+  odometry_transform_.child_frame_id  = child_frame_id;
+  odometry_transform_.transform.translation.z = 0.0;
+  
+  /* Setup publishers and subscribers */
+  left_motor_twist_subscriber_ =
+    node_handle_.subscribe(left_motor_twist_topic, 1,
+                           &Odometry::leftMotorTwistCallback, this);
+  
+  right_motor_twist_subscriber_ =
+    node_handle_.subscribe(right_motor_twist_topic, 1,
+                           &Odometry::rightMotorTwistCallback, this);
+                           
+  odometry_publisher_=
+    node_handle_.advertise<nav_msgs::Odometry>(odometry_publish_topic, 10);
+    
   ROS_INFO("Successfully launched node.");
 }
 
+/* Destructor
+ */
 Odometry::~Odometry()
 {
 }
 
-bool Odometry::reload()
+/* Left Motor Twist Callback
+ */
+void Odometry::leftMotorTwistCallback(const geometry_msgs::TwistStamped& msg)
 {
-  if (!readParameters()) {
-    ROS_ERROR("Could not read parameters.");
-    return false;
-  }
-  
-  if (leftWheelEncoderSubscriber_) {
-    leftWheelEncoderSubscriber_.shutdown();
-  }
-  
-  if (rightWheelEncoderSubscriber_) {
-    rightWheelEncoderSubscriber_.shutdown();
-  }
-  
-  /* Subsribe to encoder updates */
-  leftWheelEncoderSubscriber_ =
-    nodeHandle_.subscribe(leftWheelEncoderTopic_, 1,
-                          &Odometry::leftWheelEncoderCallback, this);
-                          
-  rightWheelEncoderSubscriber_ =
-    nodeHandle_.subscribe(rightWheelEncoderTopic_, 1,
-                          &Odometry::rightWheelEncoderCallback, this);
+  std::memcpy(&left_motor_twist_msg, &msg,
+              sizeof(geometry_msgs::TwistStamped));
 }
 
-void Odometry::leftWheelEncoderCallback(const phidgets::motor_encoder& msg)
+/* Right Motor Twist Callback
+ */
+void Odometry::rightMotorTwistCallback(const geometry_msgs::TwistStamped& msg)
 {
-  ros::Time time = ros::Time::now();
-  double dt = (time-timeleft).toSec();
-  timeleft=time;
-  lasttime=time;
-
-  vleft = (msg.count_change) * wheel_circumference /
-              (encoderTicsPerRevolutionleft_) / dt;
-
-
-  //ROS_INFO("time is %f",dt);
-  ROS_INFO("find left wheel in v=%f",vleft);
-  Odometry::publishOdometry(dt);
+  std::memcpy(&right_motor_twist_msg, &msg,
+              sizeof(geometry_msgs::TwistStamped));
 }
 
-void Odometry::rightWheelEncoderCallback(const phidgets::motor_encoder& msg)
+/* Update
+ */
+void Odometry::update()
 {
-  ros::Time time = ros::Time::now();
-  double dt = (time-timeright).toSec();
-  timeright=time;
-  lasttime=time;
-
+  /* Use the latest available message time */
+  const ros::Time now =
+    (left_motor_twist_msg.header.stamp > right_motor_twist_msg.header.stamp) ?
+      left_motor_twist_msg.header.stamp : right_motor_twist_msg.header.stamp;
   
-
-
-  vright = (-msg.count_change) * wheel_circumference /
-              (encoderTicsPerRevolutionright_) / dt;
-
-  ROS_INFO("find right wheel in v=%f",vright);
-
-  Odometry::publishOdometry(dt);
-
-
-}
-
-void Odometry::publishOdometry(double dt)
-{
-
-
-    double v_left=vleft;
-    double v_right=vright;
-
-    vx = ((v_right + v_left) / 2);
-    vy = 0;
-    vth = -atan((v_right - v_left)/wheelDistance_);
-
+  double dt = (now - last_updated_time_).toSec();
+  
+  double v_left  = left_motor_twist_msg.twist.linear.x;
+  double v_right = right_motor_twist_msg.twist.linear.x;
+  
+  double v = (v_right + v_left) / 2;
+  double w = atan((v_right - v_left) / wheel_distance_);
+  
+  double delta_x = v * cos(w) * dt;
+  double delta_y = v * sin(w) * dt;
+  double delta_theta = w * dt;
+  
+  /* Update the odometry state */
+  state_.x     += delta_x;
+  state_.y     += delta_y;
+  state_.theta += delta_theta;
     
-
-    double delta_x = (vx * cos(th)) * dt;
-    double delta_y = (vx * sin(th)) * dt;
-    double delta_th = vth * dt;
-
-
-    ROS_INFO("dx is %f",delta_x);
-    ROS_INFO("vth is %f",vth);
-
-    x += delta_x;
-    y += delta_y;
-    th += delta_th;
-
-
-  nav_msgs::Odometry odometry;
-  odometry.header.stamp = lasttime;
-  odometry.header.frame_id = headerFrameId_;
-
-  geometry_msgs::Quaternion odom_quat = tf::createQuaternionMsgFromYaw(th);
+  odometry_msg_.header.stamp    = now;
   
-  //set the position
-  odometry.pose.pose.position.x = x;
-  odometry.pose.pose.position.y = y;
-  odometry.pose.pose.position.z = 0.0;
-  odometry.pose.pose.orientation = odom_quat;
+  geometry_msgs::Quaternion odom_quat =
+    tf::createQuaternionMsgFromYaw(state_.theta);
   
-  //set the velocity
-  odometry.child_frame_id = childFrameId_;
-  odometry.twist.twist.linear.x = vx;
-  odometry.twist.twist.linear.y = vy;
-  odometry.twist.twist.angular.z = vth;
+  /* Set the position */
+  odometry_msg_.pose.pose.position.x  = state_.x;
+  odometry_msg_.pose.pose.position.y  = state_.y;
+  odometry_msg_.pose.pose.orientation = odom_quat;
   
-  //publish the message
-
-  odometryPublisher_.publish(odometry);
-  //ROS_INFO("publishing to topic ");
-
-  Odometry::broadcastFrame(odom_quat);
+  /* set the velocity */
+  odometry_msg_.twist.twist.linear.x = v;
+  odometry_msg_.twist.twist.angular.z = w;
+    
+  /* Publish the odometry */
+  odometry_publisher_.publish(odometry_msg_);
+  
+  /* Publish the frame */
+  odometry_transform_.header.stamp = now;
+    
+  odometry_transform_.transform.translation.x = state_.x;
+  odometry_transform_.transform.translation.y = state_.y;
+  odometry_transform_.transform.rotation      = odom_quat;
+  
+  frame_broadcaster_.sendTransform(odometry_transform_);
+  
+  last_updated_time_ = now;
 }
 
-void Odometry::broadcastFrame(geometry_msgs::Quaternion& quat)
+/* Load
+ */
+Odometry Odometry::load(ros::NodeHandle& n)
 {
-  geometry_msgs::TransformStamped odometryTransform;
+  double wheel_distance;
+  std::string left_motor_twist_topic;
+  std::string right_motor_twist_topic;
+  std::string odometry_topic("odometry");
+  std::string frame_id("odom");
+  std::string child_frame_id("base_link");
   
-  odometryTransform.header.stamp = lasttime;
-  odometryTransform.header.frame_id = headerFrameId_;
-  odometryTransform.child_frame_id = childFrameId_;
+  /* Load required parameters */
+  if (!n.getParam("wheel_distance", wheel_distance))
+    exit(-1);
+  ROS_INFO("wheel_distance = %f", wheel_distance);
   
-  odometryTransform.transform.translation.x = x;
-  odometryTransform.transform.translation.y = y;
-  odometryTransform.transform.translation.z = 0.0;
-  odometryTransform.transform.rotation = quat;
+  if (!n.getParam("left_motor_twist_topic", left_motor_twist_topic))
+    exit(-1);
+  ROS_INFO("left_motor_twist_topic = %s", left_motor_twist_topic.c_str());
   
-  frameBroadcaster_.sendTransform(odometryTransform);
-}
-
-bool Odometry::reloadCallback(std_srvs::Trigger::Request& request,
-                                                std_srvs::Trigger::Response& response)
-{
-  if (reload()) {
-    response.success = true;
-  } else {
-    response.success = false;
-    response.message = "Failed to reload node";
-  }
+  if (!n.getParam("right_motor_twist_topic", right_motor_twist_topic))
+    exit(-1);
+  ROS_INFO("right_motor_twist_topic = %s", right_motor_twist_topic.c_str());
+      
+  /* Load optional parameters */
+  odometry_topic = n.param("odometry_topic", odometry_topic);
+  frame_id       = n.param("frame_id", frame_id);
+  child_frame_id = n.param("child_frame_id", child_frame_id);
   
-  return true;
-}
-
-bool Odometry::readParameters()
-{
-  /* Try to load all the parameters. Return false if any one
-     of them fails. */
-  if (!nodeHandle_.getParam("wheel_distance",
-                            wheelDistance_))
-    return false;
-  ROS_INFO("Using wheel distance %f", wheelDistance_);
   
-  if (!nodeHandle_.getParam("wheel_radius",
-                            wheelRadius_))
-    return false;
-  ROS_INFO("Using wheel radius %f", wheelRadius_);
+  Odometry odometry(n, wheel_distance,
+                       left_motor_twist_topic,
+                       right_motor_twist_topic,
+                       odometry_topic,
+                       frame_id,
+                       child_frame_id);
   
-  if (!nodeHandle_.getParam("left_wheel_encoder_topic",
-                            leftWheelEncoderTopic_))
-    return false;
-  //ROS_INFO("left topic is %s",leftWheelEncoderTopic_.c_str());
-  if (!nodeHandle_.getParam("right_wheel_encoder_topic",
-                            rightWheelEncoderTopic_))
-    return false;
-  if (!nodeHandle_.getParam("header_frame_id",
-                            headerFrameId_))
-    return false;
-  if (!nodeHandle_.getParam("child_frame_id",
-                            childFrameId_))
-    return false;
-
-  if (!nodeHandle_.getParam("encoder_ticks_per_rev_left",
-                            encoderTicsPerRevolutionleft_))
-    return false;
-
-  if (!nodeHandle_.getParam("encoder_ticks_per_rev_right",
-                            encoderTicsPerRevolutionright_))
-    return false;
-  
-
-
-   
-  return true;
+  return odometry;
 }
 
 } /* namespace */

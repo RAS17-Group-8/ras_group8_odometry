@@ -9,6 +9,7 @@ find_package(catkin REQUIRED
   phidgets
   tf
   nav_msgs
+  message_filters
 )
 
 catkin_package(
@@ -22,6 +23,7 @@ catkin_package(
     phidgets
     tf
     nav_msgs
+    message_filters
 
 # DEPENDS
 )
@@ -44,7 +46,13 @@ target_link_libraries(${PROJECT_NAME}
   ${catkin_LIBRARIES}
 )
 
-catkin_add_gtest(${PROJECT_NAME}_tests test/test_odometry.cpp src/Odometry.cpp)
+if (CATKIN_ENABLE_TESTING)
+  catkin_add_gtest(${PROJECT_NAME}_tests test/test_odometry.cpp src/Odometry.cpp)
+  target_link_libraries(${PROJECT_NAME}_tests
+    ${catkin_LIBRARIES}
+  )
+  #add_rostest(test/mongo_ros.test)
+endif()
 
 # Make main executable
 install(

@@ -1,12 +1,14 @@
 left_wheel_encoder_topic: /motor_left/motorcontrol/encoder
 right_wheel_encoder_topic: /motor_right/motorcontrol/encoder
+left_motor_twist_topic: /motor_left/controller/twist
+right_motor_twist_topic: /motor_right/controller/twist
 publish_topic: odom
 header_frame_id: odometry
 child_frame_id: robot
 
-encoder_ticks_per_rev_right: 75
-encoder_ticks_per_rev_left: 99
-wheel_circumference: 0.22934
-wheel_distance: 0.24
-wheel_radius: 0.0365
+#encoder_ticks_per_rev_right: 75
+#encoder_ticks_per_rev_left: 99
+#wheel_circumference: 0.22934
+#wheel_distance: 0.24
+#wheel_radius: 0.0365
 
