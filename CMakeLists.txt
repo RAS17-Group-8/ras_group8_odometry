@@ -5,8 +5,6 @@ find_package(catkin REQUIRED
   COMPONENTS
   roscpp
   geometry_msgs
-  std_srvs
-  phidgets
   tf
   nav_msgs
 )
@@ -18,8 +16,6 @@ catkin_package(
   CATKIN_DEPENDS
     roscpp
     geometry_msgs
-    std_srvs
-    phidgets
     tf
     nav_msgs
 
@@ -44,7 +40,13 @@ target_link_libraries(${PROJECT_NAME}
   ${catkin_LIBRARIES}
 )
 
-catkin_add_gtest(${PROJECT_NAME}_tests test/test_odometry.cpp src/Odometry.cpp)
+if (CATKIN_ENABLE_TESTING)
+  catkin_add_gtest(${PROJECT_NAME}_tests test/test_odometry.cpp src/Odometry.cpp)
+  target_link_libraries(${PROJECT_NAME}_tests
+    ${catkin_LIBRARIES}
+  )
+  #add_rostest(test/mongo_ros.test)
+endif()
 
 # Make main executable
 install(

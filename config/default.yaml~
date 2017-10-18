@@ -1,0 +1,11 @@
+left_wheel_encoder_topic: /motorcontrol/encoder
+right_wheel_encoder_topic: /motorcontrol/encoder
+publish_topic: odometry
+header_frame_id: odometry
+child_frame_id: base_link
+
+encoder_ticks_per_rev: 900
+wheel_circumference: 0.22934
+base:0.24
+
+
