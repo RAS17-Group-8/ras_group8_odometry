@@ -1,7 +1,5 @@
 #include "ras_group8_odometry/Odometry.hpp"
 
-// STD
-#include <string>
 #include <math.h>
 
 namespace ras_group8_odometry {

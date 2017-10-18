@@ -3,15 +3,9 @@
 
 // ROS
 #include <ros/ros.h>
-// #include <message_filters/subscriber.h>
-// #include <message_filters/time_synchronizer.h>
-
 #include <tf/transform_broadcaster.h>
 #include <nav_msgs/Odometry.h>
-#include <std_srvs/Trigger.h>
-#include <phidgets/motor_encoder.h>
 #include <geometry_msgs/TwistStamped.h>
-
 #include <string>
 
 /* TODO: Document the methods.
