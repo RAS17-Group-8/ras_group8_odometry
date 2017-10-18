@@ -83,7 +83,7 @@ void Odometry::update()
   double v_right = right_motor_twist_msg.twist.linear.x;
   
   double v = (v_right + v_left) / 2;
-  double w = atan((v_right - v_left) / wheel_distance_);
+  double w = atan2((v_right - v_left), wheel_distance_);
   
   double delta_x = v * cos(w) * dt;
   double delta_y = v * sin(w) * dt;
