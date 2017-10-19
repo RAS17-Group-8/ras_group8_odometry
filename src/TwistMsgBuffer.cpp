@@ -25,19 +25,18 @@ bool TwistMsgBuffer::isInitialized()
 bool TwistMsgBuffer::isValid()
 {
   return isInitialized() &&
-    (msg_head_.header.seq - 1 == msg_tail_.header.seq);
+    (msg_head_->header.seq - 1 == msg_tail_->header.seq);
 }
 
-void TwistMsgBuffer::insert(geometry_msgs::TwistStamped& msg)
+void TwistMsgBuffer::insert(const geometry_msgs::TwistStamped& msg)
 {
-  geometry_msgs::TwistStamped& tmp;
+  const geometry_msgs::TwistStamped* tmp_head = msg_head_;
   /* Swap the head and the tail */
-  &tmp       = &msg_head_;
-  &msg_head_ = &msg_tail_;
-  &msg_tail_ = &tmp;
+  msg_head_ = msg_tail_;
+  msg_tail_ = tmp_head;
   
   /* Copy the message to the head */
-  &msg_head_ = &msg;
+  std::memcpy((void *) msg_head_, &msg, sizeof(geometry_msgs::TwistStamped));
   
   if (msgs_until_initialized_ != 0) {
     --msgs_until_initialized_;
@@ -49,4 +48,4 @@ void TwistMsgBuffer::flush()
   msgs_until_initialized_ = 2;
 }
 
-};
+}

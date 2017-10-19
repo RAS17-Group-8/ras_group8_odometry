@@ -21,6 +21,8 @@ Odometry::Odometry(ros::NodeHandle& node_handle,
   state_.x     = 0;
   state_.y     = 0;
   state_.theta = 0;
+  state_.v     = 0;
+  state_.w     = 0;
   
   /* Setup constant fields in messages */
   odometry_msg_.header.frame_id       = frame_id;
@@ -33,11 +35,11 @@ Odometry::Odometry(ros::NodeHandle& node_handle,
   
   /* Setup publishers and subscribers */
   left_motor_twist_subscriber_ =
-    node_handle_.subscribe(left_motor_twist_topic, 1,
+    node_handle_.subscribe(left_motor_twist_topic, 10,
                            &Odometry::leftMotorTwistCallback, this);
   
   right_motor_twist_subscriber_ =
-    node_handle_.subscribe(right_motor_twist_topic, 1,
+    node_handle_.subscribe(right_motor_twist_topic, 10,
                            &Odometry::rightMotorTwistCallback, this);
                            
   odometry_publisher_=
@@ -52,49 +54,91 @@ Odometry::~Odometry()
 {
 }
 
+/* Update State
+ * Private method that is called whenever the internal state needs to be
+ * updated.
+ */
+void Odometry::updateState()
+{
+  ros::Time t0;
+  ros::Time t1;
+  
+  double dt;
+  double v_left;
+  double v_right;
+  
+  bool valid_left  = left_motor_twist_msgs.isValid();
+  bool valid_right = right_motor_twist_msgs.isValid();
+  
+  if (!valid_left || !valid_right) {
+    if (valid_left) {
+      last_updated_time_ = right_motor_twist_msgs.head()->header.stamp;
+    } else if (valid_right) {
+      last_updated_time_ = left_motor_twist_msgs.head()->header.stamp;
+    } else {
+      ROS_INFO("Motor msg buffers are warming up");
+    }
+    return;
+  }
+      
+  /* Set t0 */
+  if (left_motor_twist_msgs.tail()->header.stamp <
+                                  right_motor_twist_msgs.tail()->header.stamp) {
+    t0 = right_motor_twist_msgs.tail()->header.stamp;
+  } else {
+    t0 = left_motor_twist_msgs.tail()->header.stamp;
+  }
+  
+  /* Set t1 */
+  if (left_motor_twist_msgs.head()->header.stamp <
+                                  right_motor_twist_msgs.head()->header.stamp) {
+    t1 = left_motor_twist_msgs.head()->header.stamp;
+  } else {
+    t1 = right_motor_twist_msgs.head()->header.stamp;
+  }
+  
+  /* If not then we missed something */
+  ROS_ASSERT(last_updated_time_ == t0);
+  
+  /* Extract the valid region of time t1 - t0
+   * We know for sure that the distance traveled during this
+   * time is dt*v_{left,right}.
+   */
+  dt      = (t1 - t0).toSec();
+  v_left  = left_motor_twist_msgs.head()->twist.linear.x;
+  v_right = right_motor_twist_msgs.head()->twist.linear.x;
+  
+  state_.v = (v_right + v_left) / 2;
+  state_.w = atan2((v_right - v_left), wheel_distance_);
+  
+  state_.x     += state_.v * cos(state_.w) * dt;
+  state_.y     += state_.v * sin(state_.w) * dt;
+  state_.theta += state_.w * dt;
+  
+  last_updated_time_ = t1;
+}
+
 /* Left Motor Twist Callback
  */
 void Odometry::leftMotorTwistCallback(const geometry_msgs::TwistStamped& msg)
 {
-  std::memcpy(&left_motor_twist_msg, &msg,
-              sizeof(geometry_msgs::TwistStamped));
+  left_motor_twist_msgs.insert(msg);
+  updateState();
 }
 
 /* Right Motor Twist Callback
  */
 void Odometry::rightMotorTwistCallback(const geometry_msgs::TwistStamped& msg)
 {
-  std::memcpy(&right_motor_twist_msg, &msg,
-              sizeof(geometry_msgs::TwistStamped));
+  right_motor_twist_msgs.insert(msg);
+  updateState();
 }
 
 /* Update
  */
 void Odometry::update()
 {
-  /* Use the latest available message time */
-  const ros::Time now =
-    (left_motor_twist_msg.header.stamp > right_motor_twist_msg.header.stamp) ?
-      left_motor_twist_msg.header.stamp : right_motor_twist_msg.header.stamp;
-  
-  double dt = (now - last_updated_time_).toSec();
-  
-  double v_left  = left_motor_twist_msg.twist.linear.x;
-  double v_right = right_motor_twist_msg.twist.linear.x;
-  
-  double v = (v_right + v_left) / 2;
-  double w = atan2((v_right - v_left), wheel_distance_);
-  
-  double delta_x = v * cos(w) * dt;
-  double delta_y = v * sin(w) * dt;
-  double delta_theta = w * dt;
-  
-  /* Update the odometry state */
-  state_.x     += delta_x;
-  state_.y     += delta_y;
-  state_.theta += delta_theta;
-    
-  odometry_msg_.header.stamp    = now;
+  odometry_msg_.header.stamp = last_updated_time_;
   
   geometry_msgs::Quaternion odom_quat =
     tf::createQuaternionMsgFromYaw(state_.theta);
@@ -105,22 +149,20 @@ void Odometry::update()
   odometry_msg_.pose.pose.orientation = odom_quat;
   
   /* set the velocity */
-  odometry_msg_.twist.twist.linear.x = v;
-  odometry_msg_.twist.twist.angular.z = w;
+  odometry_msg_.twist.twist.linear.x = state_.v;
+  odometry_msg_.twist.twist.angular.z = state_.w;
     
   /* Publish the odometry */
   odometry_publisher_.publish(odometry_msg_);
   
   /* Publish the frame */
-  odometry_transform_.header.stamp = now;
+  odometry_transform_.header.stamp = last_updated_time_;
     
   odometry_transform_.transform.translation.x = state_.x;
   odometry_transform_.transform.translation.y = state_.y;
   odometry_transform_.transform.rotation      = odom_quat;
   
   frame_broadcaster_.sendTransform(odometry_transform_);
-  
-  last_updated_time_ = now;
 }
 
 /* Load

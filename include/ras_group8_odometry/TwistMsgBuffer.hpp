@@ -28,20 +28,20 @@ class TwistMsgBuffer
     isValid();
     
   void
-    insert(geometry_msgs::TwistStamped& msg);
+    insert(const geometry_msgs::TwistStamped& msg);
   
-  const geometry_msgs::TwistStamped&
+  const geometry_msgs::TwistStamped*
     head()
   {
-    ROS_ASSERT(isValid());
-    return &msg_head_;
+    ROS_ASSERT(msgs_until_initialized_ <= 1);
+    return msg_head_;
   }
     
-  const geometry_msgs::TwistStamped&
+  const geometry_msgs::TwistStamped*
     tail()
   {
-    ROS_ASSERT(isValid());
-    return &msg_tail_;
+    ROS_ASSERT(msgs_until_initialized_ == 0);
+    return msg_tail_;
   }
   
  private:
@@ -55,10 +55,9 @@ class TwistMsgBuffer
   const geometry_msgs::TwistStamped  msg_a_;
   const geometry_msgs::TwistStamped  msg_b_;
   
-  const geometry_msgs::TwistStamped& msg_head_;
-  const geometry_msgs::TwistStamped& msg_tail_;
+  const geometry_msgs::TwistStamped* msg_head_;
+  const geometry_msgs::TwistStamped* msg_tail_;
 };
 
 } /* namespace */
 
-#endif /* RAS_GROUP8_ODOMETRY */

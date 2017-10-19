@@ -6,6 +6,7 @@
 #include <tf/transform_broadcaster.h>
 #include <nav_msgs/Odometry.h>
 #include <geometry_msgs/TwistStamped.h>
+#include <ras_group8_odometry/TwistMsgBuffer.hpp>
 #include <string>
 
 /* TODO: Document the methods.
@@ -20,6 +21,8 @@ typedef struct {
   double x;
   double y;
   double theta;
+  double v;
+  double w;
 } state_t;
 
 class Odometry
@@ -48,6 +51,9 @@ class Odometry
 
  private:
   void
+    updateState();
+    
+  void
     leftMotorTwistCallback(const geometry_msgs::TwistStamped& msg);
     
   void
@@ -73,8 +79,10 @@ class Odometry
   
   /* Variables
    */
-  geometry_msgs::TwistStamped left_motor_twist_msg;
-  geometry_msgs::TwistStamped right_motor_twist_msg;
+  //geometry_msgs::TwistStamped left_motor_twist_msg;
+  //geometry_msgs::TwistStamped right_motor_twist_msg;
+  TwistMsgBuffer left_motor_twist_msgs;
+  TwistMsgBuffer right_motor_twist_msgs;
   
   ros::Time last_updated_time_;
   
