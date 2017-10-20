@@ -27,6 +27,10 @@ include_directories(
   ${catkin_INCLUDE_DIRS}
 )
 
+add_library(${PROJECT_NAME}_twist_msg_buffer
+  src/TwistMsgBuffer.cpp
+)
+
 add_executable(${PROJECT_NAME}
   src/odometry_node.cpp
   src/Odometry.cpp
@@ -36,16 +40,34 @@ add_dependencies(${PROJECT_NAME}
   ${catkin_EXPORTED_TARGETS}
 )
 
+target_link_libraries(${PROJECT_NAME}_twist_msg_buffer
+  ${catkin_LIBRARIES}
+)
+
 target_link_libraries(${PROJECT_NAME}
+  ${PROJECT_NAME}_twist_msg_buffer
   ${catkin_LIBRARIES}
 )
 
 if (CATKIN_ENABLE_TESTING)
-  catkin_add_gtest(${PROJECT_NAME}_tests test/test_odometry.cpp src/Odometry.cpp)
+  catkin_add_gtest(${PROJECT_NAME}_tests
+    test/test_odometry.cpp
+    src/Odometry.cpp
+  )
+  
   target_link_libraries(${PROJECT_NAME}_tests
+    ${PROJECT_NAME}_twist_msg_buffer
     ${catkin_LIBRARIES}
   )
-  #add_rostest(test/mongo_ros.test)
+
+  catkin_add_gtest(test_twist_msg_buffer
+    test/test_twist_msg_buffer.cpp
+  )
+  
+  target_link_libraries(test_twist_msg_buffer
+    ${PROJECT_NAME}_twist_msg_buffer
+    ${catkin_LIBRARIES}
+  )
 endif()
 
 # Make main executable

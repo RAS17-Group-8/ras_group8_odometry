@@ -1,7 +1,10 @@
 <launch>
 
   <!-- Launch RAS Group8 Odometry Node -->
-  <node pkg="ras_group8_odometry" type="ras_group8_odometry" name="ras_group8_odometry" output="screen">
+  <node name="odometry"
+         pkg="ras_group8_odometry"
+        type="ras_group8_odometry"
+      output="screen">
     <rosparam command="load" file="$(find ras_group8_odometry)/config/default.yaml" />
   </node>
 
