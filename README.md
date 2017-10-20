@@ -1,8 +1,17 @@
 # Odometry
 
-ROS node providing position estimates based on the wheel velocities of the robot.
+  Odometry is the use of data from motion sensors to estimate change in position over time.
+
+This ROS node provides position estimates based on the following sources:
+
+* [x] wheel velocities (dead reckoning)
+* [ ] IMU sensor readings
+* [ ] control inputs and robot dynamics
+
 
 ## Error
+
+### Dead Reckoning
 
 The position estimate will accumulate a small error over time, depending on how out of sync the message streams from the two motor controllers are.
 
